@@ -131,8 +131,6 @@ function doBlur() {
 
   console.time('doBlur');
 
-
-
   var kernel= getKernel(scale, splinePoints)
   updateKernelCanvas(kernel)
 
@@ -156,13 +154,10 @@ function doBlur() {
       g+= source.data[c+o+1]*intensity
       b+= source.data[c+o+2]*intensity
     }
-    
-//    console.log(r,g,b) 
+
     var nr= r/256
     var ng= g/256
     var nb= b/256
-
-//    console.log(r,g,b) 
 
     dst.data[c]= nr
     dst.data[c+1]= ng
@@ -171,18 +166,9 @@ function doBlur() {
 
   }
 
-  
-
-
-
-
-//  resize()
   context.putImageData(dst,0,0)
 
-
-  console.timeEnd('doBlur');
-    
-  
+  console.timeEnd('doBlur')
 }
 
 
@@ -200,12 +186,37 @@ function getRandomPoint(scale){
 
 
 var item=0
+var cv= 
+
+function getCVfromURL(){
+    cv=[]
+    var spline= new URLSearchParams(window.location.search).get("spline")
+    var points= spline.split(",")
+    for (const p of points){
+        var s=p.split("-")
+        cv.push([parseInt(s[0]), parseInte(s[1])])
+    }
+}
+
+function setCVinURL(){
+    var s=""
+    for (const p of cv){
+        s+= parseInt(p[0]) + "-" + parseInt(p[1]) + ","
+    } 
+    
+    s=s.substring(0,s.length-1)
+    history.pushState({},"Mo' Blur","/?spline="+s)
+}
 
 function getKernel(scale, count){
 
-  var cv= [getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale)]
+//  var cv= [getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale)]
+  getCVfromURL()
+  if (!cv) {
     cv=vips[item++]
-
+    setCVinURL()
+  }
+    
   for (const p of cv){
     p[0]*= scale
     p[1]*= scale
@@ -238,13 +249,9 @@ function getKernel(scale, count){
       var y= parseInt(s[1])
       res.push([x,y,intensity])
   }
-  return res
   
-  var coords= ""
-  for (p of cv)
-      coords+= parseInt(p[0])+","+parseInt(p[1])+","
-      
-  history.pushState({},"Mo' Blur","/?spline="+coords)
+  
+  return res
 }
 
 
