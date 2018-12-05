@@ -197,7 +197,7 @@ function getCVfromURL(){
     var points= spline.split(",")
     for (const p of points){
         var s=p.split("-")
-        cv.push([parseInt(s[0]), parseInte(s[1])])
+        cv.push([parseInt(s[0]), parseInt(s[1])])
     }
 }
 
