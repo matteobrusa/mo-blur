@@ -206,7 +206,10 @@ function setCVinURL(){
     } 
     
     s=s.substring(0,s.length-1)
-    history.pushState({},"Mo' Blur","/?spline="+s)
+
+    var newurl = window.location.protocol + "//" + window.location.host 
+               + window.location.pathname + "?coords="+s;
+    history.pushState({},"Mo' Blur",newurl)
 }
 
 function getKernel(scale, count){
