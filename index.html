@@ -1,0 +1,21 @@
+<html>
+
+<head>
+
+    <title>Mo' Blur</title>
+
+    <script type="text/javascript" src="bspline.js"></script>
+    <script type="text/javascript" src="index.js"></script>
+ 
+</head>
+
+<body onload="onload();" onclick="doBlur()" style="background-color:#111; position: relative;">
+
+    <canvas id="source" style="width: 98vw; height: 98vw; display: none;"></canvas>
+    <canvas id="main"  style=" position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -100;width: 98vw; height: 98vw;"></canvas>
+    <canvas id="kernel" style="position: relative; z-index: 100; width: 33; height: 33vw;"></canvas>
+
+</body>
