@@ -223,11 +223,9 @@ function getKernel(scale, count){
     setCVinURL()
   }
   
-  var cv2= cv.slice
-  for (const p of cv2){
-    p[0]*= -scale
-    p[1]*= -scale
-    
+  var cv2= []
+  for (const p of cv){
+    cv2.push([p[0] * -scale, p[1]* -scale]) 
   }
 
   var increment= 256/count
