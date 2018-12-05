@@ -186,7 +186,7 @@ function getRandomPoint(scale){
 
 
 var item=0
-var cv= 
+var cv
 
 function getCVfromURL(){
     cv=[]
