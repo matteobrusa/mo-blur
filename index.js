@@ -222,10 +222,11 @@ function getKernel(scale, count){
     cv=vips[item++]
     setCVinURL()
   }
-    
-  for (const p of cv){
-    p[0]*= scale
-    p[1]*= scale
+  
+  var cv2= cv.slice
+  for (const p of cv2){
+    p[0]*= -scale
+    p[1]*= -scale
     
   }
 
@@ -235,7 +236,7 @@ function getKernel(scale, count){
   //var spline = new BSpline(cv,3,true)
     for(var t=0; t<count; t++) {
       //var point = spline.calcAt(t/count)
-      var point= interpolate(t/count, 2, cv)
+      var point= interpolate(t/count, 2, cv2)
       if (map[point]){
         map[point]+= increment 
       }
