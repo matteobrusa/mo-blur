@@ -181,6 +181,8 @@ function doBlur() {
 
 
   console.timeEnd('doBlur');
+    
+  
 }
 
 
@@ -237,6 +239,12 @@ function getKernel(scale, count){
       res.push([x,y,intensity])
   }
   return res
+  
+  var coords= ""
+  for (p of cv)
+      coords+= parseInt(p[0])+","+parseInt(p[1])+","
+      
+  history.pushState({},"Mo' Blur","/?spline="+coords)
 }
 
 
