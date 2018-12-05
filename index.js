@@ -210,7 +210,7 @@ function setCVinURL(){
     s=s.substring(0,s.length-1)
 
     var newurl = window.location.protocol + "//" + window.location.host 
-               + window.location.pathname + "?coords="+s;
+               + window.location.pathname + "?spline="+s;
     history.pushState({},"Mo' Blur",newurl)
 }
 
