@@ -191,6 +191,7 @@ var cv
 function getCVfromURL(){
     cv=[]
     var spline= new URLSearchParams(window.location.search).get("spline")
+    if (!spline) return
     var points= spline.split(",")
     for (const p of points){
         var s=p.split("-")
