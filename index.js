@@ -5,9 +5,10 @@ var canvas
 var context
 var kernel
 var filename= "test.jpg"
+ 
 
-const splinePoints=32
-const scale= 1
+const splinePoints=64
+var scale= 1
 const maxImageSize= 1600
 
 function onload() { 
@@ -41,7 +42,7 @@ function onload() {
 
 
         getCVfromURL()
-        kernel= getKernel(scale, splinePoints)
+        kernel= getKernel()
         updateKernelCanvas(kernel)
 
         doBlur() 
@@ -74,6 +75,8 @@ function getCVfromURL(){
         var s=p.split("-")
         cv.push([parseInt(s[0]), parseInt(s[1])])
     }
+
+    scale= Number(new URLSearchParams(window.location.search).get("scale"))
 }
 
 function setCVinURL(){
@@ -85,7 +88,7 @@ function setCVinURL(){
     s=s.substring(0,s.length-1)
 
     var newurl = window.location.protocol + "//" + window.location.host 
-               + window.location.pathname + "?spline="+s;
+               + window.location.pathname + "?spline="+s + "&scale="+scale;
     history.pushState({},"Mo' Blur",newurl)
 }
 
@@ -273,14 +276,17 @@ var cv
 ///
 //////////////////////////////////////////////////////////////////////////
 
-function getKernel(scale, count){
+function getKernel(){
 
 //  var cv= [getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale)]
   
   if (!cv) {
     cv=vips[item++]
-    setCVinURL()
   }
+
+  setCVinURL()
+
+  var count= parseInt( splinePoints* scale)
   
   var cv2= []
   for (const p of cv){
