@@ -11,12 +11,21 @@ const splinePoints=64
 var scale= 1
 const maxImageSize= 1600
 
+var textSpline 
+var textScale
+
 function onload() { 
 
     canvas= document.getElementById("main")
 
     document.addEventListener("dragover", handleDragover, true);
     document.addEventListener('drop', handleDrop, true)
+
+	textSpline= document.getElementById("textSpline")
+	textScale= document.getElementById("textScale")
+	 
+    textSpline.addEventListener("keyup", updateParams)
+	textScale.addEventListener("keyup", updateParams)
 
     if (canvas.getContext) {
 
@@ -69,29 +78,51 @@ function getCVfromURL(){
     var spline= new URLSearchParams(window.location.search).get("spline")
     if (!spline) return
     
-    cv=[]
+    parseSpline(spline)
+
+    scale= Number(new URLSearchParams(window.location.search).get("scale"))
+}
+
+function parseSpline(spline) {
+	cv=[]
     var points= spline.split(",")
     for (const p of points){
         var s=p.split("-")
         cv.push([parseInt(s[0]), parseInt(s[1])])
     }
-
-    scale= Number(new URLSearchParams(window.location.search).get("scale"))
 }
 
 function setCVinURL(){
-    var s=""
+    var spline=""
     for (const p of cv){
-        s+= parseInt(p[0]) + "-" + parseInt(p[1]) + ","
+        spline+= parseInt(p[0]) + "-" + parseInt(p[1]) + ","
     } 
     
-    s=s.substring(0,s.length-1)
+    spline=spline.substring(0,spline.length-1)
 
     var newurl = window.location.protocol + "//" + window.location.host 
-               + window.location.pathname + "?spline="+s + "&scale="+scale;
+               + window.location.pathname + "?spline="+spline + "&scale="+scale;
+
     history.pushState({},"Mo' Blur",newurl)
+
+    textSpline.value= spline
+    textScale.value= scale
 }
 
+function updateParams(event) {
+ 
+    event.preventDefault();
+    if (event.keyCode === 13) {
+
+		parseSpline(textSpline.value)
+		scale= Number(textScale.value)
+
+		kernel= getKernel()
+		updateKernelCanvas(kernel)
+
+		doBlur() 
+    }
+}
 
 function handleDragover(e) {
 	e.preventDefault();
@@ -150,30 +181,6 @@ function scaleAndUploadImageFromUrl(url) {
 
  
 		doBlur()
-
-/*
-		// compress to jpg and attach to anchor
-		var data = canvas.getImageData(0,0,w,h).toDataURL("image/jpeg", imgQuality);
-
-		var blob = dataURItoBlob(data);
-
-		// upload to s3
-		console.log("uploading " + filename);
-		uploadImage(pathPrefix, filename, blob, function() {
-
-			console.log("uploaded " + pathPrefix + filename);
-
-			showBusy(article, false);
-
-			// callback after upload
-			if (cbImageUploaded)
-				cbImageUploaded(photo, filename);
-		});
-
-		// callback after scale, photo might be null
-		if (cbImageScaled)
-			var photo = cbImageScaled(article, data);
-*/
 	};
 	image.src = url;
 }
@@ -181,7 +188,7 @@ function scaleAndUploadImageFromUrl(url) {
 function loadNext(){
 
   cv=vips[item++]
-  kernel= getKernel(scale, splinePoints)
+  kernel= getKernel()
   updateKernelCanvas(kernel)
 
   doBlur() 
