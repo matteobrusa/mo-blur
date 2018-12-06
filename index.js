@@ -3,15 +3,19 @@
 var source
 var canvas  
 var context
+var kernel
+var filename= "test.jpg"
 
-const splinePoints=64
+const splinePoints=32
 const scale= 1
+const maxImageSize= 1600
 
-function onload() {
-    
-//    var cw= canvas.width
-//    var ch= canvas.height
+function onload() { 
+
     canvas= document.getElementById("main")
+
+    document.addEventListener("dragover", handleDragover, true);
+    document.addEventListener('drop', handleDrop, true)
 
     if (canvas.getContext) {
 
@@ -34,6 +38,11 @@ function onload() {
 
         canvas.width= w
         canvas.height= h 
+
+
+        getCVfromURL()
+        kernel= getKernel(scale, splinePoints)
+        updateKernelCanvas(kernel)
 
         doBlur() 
         };
@@ -81,6 +90,112 @@ function setCVinURL(){
 }
 
 
+function handleDragover(e) {
+	e.preventDefault();
+}
+function handleDrop(e) {
+  e.preventDefault();
+
+  let dt = e.dataTransfer
+  let files = dt.files
+
+	filename= files[0]
+  loadImage(filename)
+}
+
+function loadImage(file, source) {
+
+	console.log("scaling " + file.name);
+
+	var reader = new FileReader();
+	reader.onload = function(e) {
+
+		scaleAndUploadImageFromUrl(e.target.result);
+	};
+	reader.readAsDataURL(file);
+}
+
+function scaleAndUploadImageFromUrl(url) {
+
+	var image = new Image();
+	image.onload = function() {
+        
+        var w= image.width
+        var h= image.height
+
+		if (h > maxImageSize) {
+			w*= maxImageSize / h;
+			h= maxImageSize;
+		}
+		if (w > maxImageSize) {
+			h *= maxImageSize / w;
+			w = maxImageSize;
+		}
+      
+        if (w<image.width)
+          console.log("scaling down to "+w+"x"+h)
+
+		var c= document.createElement('canvas')
+		var ctx= c.getContext("2d");
+		canvas.width= c.width= image.width= w;
+		canvas.height= c.height= image.height= h;
+		ctx.drawImage(image, 0, 0, w, h)
+
+		source= ctx.getImageData(0,0,w,h)
+
+ 
+		doBlur()
+
+/*
+		// compress to jpg and attach to anchor
+		var data = canvas.getImageData(0,0,w,h).toDataURL("image/jpeg", imgQuality);
+
+		var blob = dataURItoBlob(data);
+
+		// upload to s3
+		console.log("uploading " + filename);
+		uploadImage(pathPrefix, filename, blob, function() {
+
+			console.log("uploaded " + pathPrefix + filename);
+
+			showBusy(article, false);
+
+			// callback after upload
+			if (cbImageUploaded)
+				cbImageUploaded(photo, filename);
+		});
+
+		// callback after scale, photo might be null
+		if (cbImageScaled)
+			var photo = cbImageScaled(article, data);
+*/
+	};
+	image.src = url;
+}
+
+function loadNext(){
+
+  cv=vips[item++]
+  kernel= getKernel(scale, splinePoints)
+  updateKernelCanvas(kernel)
+
+  doBlur() 
+}
+
+function save() {
+
+	canvas.toBlob(function(blob){
+	console.log(blob)
+	var a= document.createElement("a")
+		a.href = URL.createObjectURL(blob);
+		a.download= filename
+
+		a.click()
+	}, "image/jpeg",0.88); 
+}
+
+
+
 
 //////////////////////////////////////////////////////////////////////////
 ///
@@ -92,9 +207,6 @@ function setCVinURL(){
 function doBlur() {
 
   console.time('doBlur');
-
-  var kernel= getKernel(scale, splinePoints)
-  updateKernelCanvas(kernel)
 
   var w= source.width
   var h= source.height
@@ -162,7 +274,7 @@ var cv
 function getKernel(scale, count){
 
 //  var cv= [getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale),getRandomPoint(scale)]
-  getCVfromURL()
+  
   if (!cv) {
     cv=vips[item++]
     setCVinURL()
