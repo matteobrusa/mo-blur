@@ -99,18 +99,20 @@ function handleDrop(e) {
   let dt = e.dataTransfer
   let files = dt.files
 
-	filename= files[0]
-  loadImage(filename)
+	
+  loadImage(files[0])
 }
 
 function loadImage(file, source) {
 
-	console.log("scaling " + file.name);
+	filename= file.name
+	console.log("scaling " + filename);
 
 	var reader = new FileReader();
 	reader.onload = function(e) {
 
 		scaleAndUploadImageFromUrl(e.target.result);
+
 	};
 	reader.readAsDataURL(file);
 }
@@ -188,7 +190,7 @@ function save() {
 	console.log(blob)
 	var a= document.createElement("a")
 		a.href = URL.createObjectURL(blob);
-		a.download= filename
+		a.download= "blur_"+filename
 
 		a.click()
 	}, "image/jpeg",0.88); 
