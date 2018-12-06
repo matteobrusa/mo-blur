@@ -36,11 +36,6 @@ function onload() {
         canvas.height= h 
 
         doBlur() 
-
-
-//            ctx.drawImage(img, 0, 0)
-
-
         };
     }
 }
@@ -59,74 +54,41 @@ function getData(img){
   return ctx.getImageData(0,0,c.width,c.height)
 }
 
-function getImageData(width, height){
-  
+function getCVfromURL(){
+
+    var spline= new URLSearchParams(window.location.search).get("spline")
+    if (!spline) return
+    
+    cv=[]
+    var points= spline.split(",")
+    for (const p of points){
+        var s=p.split("-")
+        cv.push([parseInt(s[0]), parseInt(s[1])])
+    }
 }
 
-function updateKernelCanvas(kernel){
-
-  var intensity=0
-  var minx=12345, miny=12345 
-  var maxx=0, maxy=0
-
-  for (const tuple of kernel){  
+function setCVinURL(){
+    var s=""
+    for (const p of cv){
+        s+= parseInt(p[0]) + "-" + parseInt(p[1]) + ","
+    } 
     
-    var x= tuple[0]  
-    var y= tuple[1] 
-    var intensity= tuple[2]
-    if (x<minx) 
-      minx= x
-    if (y<miny) 
-      miny= y
-    if (x>maxx) 
-      maxx= x
-    if (y>maxy) 
-      maxy=y
-  }
+    s=s.substring(0,s.length-1)
 
-  var kw= maxx-minx+1
-  var kh= maxy-miny+1
-
-  console.log("kernel points: "+ Object.keys(kernel).length+
-              "   intensity: "+ intensity + 
-              "   size: "+ kw+","+kh)
-
-
-
-
-  var c= document.getElementById("kernel")
-  c.width= kw
-  c.height= kh
-//  getCanvas(kw, kh);
-  var ctx= c.getContext('2d')
-
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.fillRect( 0, 0, kw, kh);
-
-  var data= ctx.getImageData(0,0,kw,kh)
-
-
-  for (const tuple of kernel){
-    
-    var x= kw- 1-(tuple[0] -minx)
-    var y= kh-1-(tuple[1] -miny)
-    var intensity= tuple[2]
-
-    
-    var hi= Math.tanh(intensity*64/256)*256
-
-    data.data[4*(x+kw*y)]= hi 
-    data.data[1+4*(x+kw*y)]= hi 
-    data.data[2+4*(x+kw*y)]= hi
-    data.data[3+4*(x+kw*y)]= 255
-  }
-
-  ctx.putImageData(data,0,0)
-
-  c.style.width= kw*4
-  c.style.height= kh*4
+    var newurl = window.location.protocol + "//" + window.location.host 
+               + window.location.pathname + "?spline="+s;
+    history.pushState({},"Mo' Blur",newurl)
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+///
+///  convolve
+///
+//////////////////////////////////////////////////////////////////////////
+
+ 
 function doBlur() {
 
   console.time('doBlur');
@@ -188,31 +150,14 @@ function getRandomPoint(scale){
 var item=0
 var cv
 
-function getCVfromURL(){
 
-    var spline= new URLSearchParams(window.location.search).get("spline")
-    if (!spline) return
-    
-    cv=[]
-    var points= spline.split(",")
-    for (const p of points){
-        var s=p.split("-")
-        cv.push([parseInt(s[0]), parseInt(s[1])])
-    }
-}
 
-function setCVinURL(){
-    var s=""
-    for (const p of cv){
-        s+= parseInt(p[0]) + "-" + parseInt(p[1]) + ","
-    } 
-    
-    s=s.substring(0,s.length-1)
 
-    var newurl = window.location.protocol + "//" + window.location.host 
-               + window.location.pathname + "?spline="+s;
-    history.pushState({},"Mo' Blur",newurl)
-}
+//////////////////////////////////////////////////////////////////////////
+///
+///  kernel stuff
+///
+//////////////////////////////////////////////////////////////////////////
 
 function getKernel(scale, count){
 
@@ -229,36 +174,111 @@ function getKernel(scale, count){
   }
 
   var increment= 256/count
-
   var map={}
-  //var spline = new BSpline(cv,3,true)
-    for(var t=0; t<count; t++) {
-      //var point = spline.calcAt(t/count)
-      var point= interpolate(t/count, 2, cv2)
-      if (map[point]){
-        map[point]+= increment 
-      }
-      else{
-        map[point]= increment  
-      }
+  var avgx=0, avgy=0
+
+  // get the spline points into an intensity map
+
+  for(var t=0; t<count; t++) {
+    //var point = spline.calcAt(t/count)
+    var point= interpolate(t/count, 2, cv2)
+    var x= point[0]
+    var y= point[1]
+    
+    avgx+= x
+    avgy+= y
+
+    point=[parseInt(x), parseInt(y)]
+
+    if (map[point]){
+      map[point]+= increment 
     }
-  
-  console.log(map)
+    else{
+      map[point]= increment  
+    }
+  }
+
+  avgx= parseInt(avgx/count)
+  avgy= parseInt(avgy/count)
+   
+  // reformat the map as list, recenter
 
   var res=[]
   for (const key in map){
 
       var intensity= map[key]
       var s= key.split(",")
-      var x= parseInt(s[0])
-      var y= parseInt(s[1])
+      var x= parseInt(s[0]) - avgx
+      var y= parseInt(s[1]) - avgy
       res.push([x,y,intensity])
   }
   
-  
+  console.log(res)
   return res
 }
 
+function updateKernelCanvas(kernel){
+
+  var intensity=0
+  var minx=12345, miny=12345 
+  var maxx=-12345, maxy=-12345
+
+  for (const tuple of kernel){  
+    
+    var x= tuple[0]  
+    var y= tuple[1] 
+    intensity+= tuple[2]
+    if (x<minx) 
+      minx= x
+    if (y<miny) 
+      miny= y
+    if (x>maxx) 
+      maxx= x
+    if (y>maxy) 
+      maxy=y
+  }
+
+  var kw= maxx-minx+1
+  var kh= maxy-miny+1
+
+  console.log("kernel points: "+ Object.keys(kernel).length+
+              "   intensity: "+ intensity + 
+              "   size: "+ kw+","+kh)
+
+
+  // draw the kernel on the canvas
+  
+  var c= document.getElementById("kernel")
+  c.width= kw
+  c.height= kh
+ 
+  var ctx= c.getContext('2d')
+
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillRect( 0, 0, kw, kh);
+
+  var data= ctx.getImageData(0,0,kw,kh)
+
+
+  for (const tuple of kernel){
+    
+    var x= kw - 1 -(tuple[0] - minx)
+    var y= kh - 1 -(tuple[1] - miny)
+    var intensity= tuple[2]
+    
+    var hi= Math.tanh(intensity*44/256)*256
+
+    data.data[4*(x+kw*y)]= hi 
+    data.data[1+4*(x+kw*y)]= hi 
+    data.data[2+4*(x+kw*y)]= hi
+    data.data[3+4*(x+kw*y)]= 255
+  }
+
+  ctx.putImageData(data,0,0)
+
+  c.style.width= kw*4
+  c.style.height= kh*4
+}
 
 var vips= [
 [[62.29016949,74.17869893]
