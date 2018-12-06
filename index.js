@@ -7,12 +7,13 @@ var kernel
 var filename= "test.jpg"
  
 
-const splinePoints=64
+var splinePoints=64
 var scale= 1
-const maxImageSize= 1600
+var maxImageSize= 1600
 
 var textSpline 
 var textScale
+var textSplinePoints
 
 function onload() { 
 
@@ -23,9 +24,11 @@ function onload() {
 
 	textSpline= document.getElementById("textSpline")
 	textScale= document.getElementById("textScale")
+	textSplinePoints= document.getElementById("textSplinePoints")
 	 
     textSpline.addEventListener("keyup", updateParams)
 	textScale.addEventListener("keyup", updateParams)
+	textSplinePoints.addEventListener("keyup", updateParams)
 
     if (canvas.getContext) {
 
@@ -80,7 +83,18 @@ function getCVfromURL(){
     
     parseSpline(spline)
 
-    scale= Number(new URLSearchParams(window.location.search).get("scale"))
+	var s= new URLSearchParams(window.location.search).get("scale")
+	if (s)
+    	scale= Number(s)
+    
+    s= new URLSearchParams(window.location.search).get("maxImageSize")
+	if (s)
+    	maxImageSize= Number(s)
+
+    s= new URLSearchParams(window.location.search).get("splinePoints")
+	if (s)
+    	splinePoints= Number(s)
+    	
 }
 
 function parseSpline(spline) {
@@ -101,12 +115,17 @@ function setCVinURL(){
     spline=spline.substring(0,spline.length-1)
 
     var newurl = window.location.protocol + "//" + window.location.host 
-               + window.location.pathname + "?spline="+spline + "&scale="+scale;
-
+               + window.location.pathname 
+               + "?spline=" + spline 
+               + "&scale=" + scale
+               + "&maxImageSize=" + maxImageSize
+               + "&splinePoints=" + splinePoints
+ 
     history.pushState({},"Mo' Blur",newurl)
 
     textSpline.value= spline
     textScale.value= scale
+	textSplinePoints.value= splinePoints
 }
 
 function updateParams(event) {
@@ -116,6 +135,7 @@ function updateParams(event) {
 
 		parseSpline(textSpline.value)
 		scale= Number(textScale.value)
+		splinePoints= Number(textSplinePoints.value)
 
 		kernel= getKernel()
 		updateKernelCanvas(kernel)
@@ -408,6 +428,10 @@ function updateKernelCanvas(kernel){
 }
 
 var vips= [
+[[6,48]
+,[6,44]
+,[5,65]
+,[0,88]],
 [[62.29016949,74.17869893]
 ,[79.51935656,94.24502838]
 ,[55.98985747,92.23249967]
