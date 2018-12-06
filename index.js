@@ -4,6 +4,7 @@ var source
 var canvas  
 var context
 var kernel
+var center
 var filename= "test.jpg"
  
 
@@ -99,20 +100,24 @@ function getCVfromURL(){
 
 function parseSpline(spline) {
 	cv=[]
-    var points= spline.split(",")
+    var points= spline.split("_")
     for (const p of points){
-        var s=p.split("-")
+        var s=p.split(",")
         cv.push([parseInt(s[0]), parseInt(s[1])])
     }
 }
 
-function setCVinURL(){
-    var spline=""
+function cvToString() {
+	var spline=""
     for (const p of cv){
-        spline+= parseInt(p[0]) + "-" + parseInt(p[1]) + ","
+        spline+= parseInt(p[0]) + "," + parseInt(p[1]) + "_"
     } 
     
-    spline=spline.substring(0,spline.length-1)
+    return spline.substring(0,spline.length-1)
+}
+
+function setCVinURL(){
+    var spline= cvToString()
 
     var newurl = window.location.protocol + "//" + window.location.host 
                + window.location.pathname 
@@ -226,7 +231,28 @@ function save() {
 	}, "image/jpeg",0.88); 
 }
 
+function rotate(degrees) {
+	var rads= degrees*Math.PI*2/360
 
+	for (const p of cv) {
+		var np= rotatePoint(p, rads)
+		p[0]=np[0]
+		p[1]=np[1]
+
+	}
+	kernel= getKernel()
+	updateKernelCanvas(kernel)
+	doBlur() 
+}
+
+function rotatePoint(p,rads) {
+
+	var x= p[0], y= p[1]
+	var c= Math.cos(rads)
+	var s= Math.sin(rads)
+
+	return [x*c - y*s, y*c + x*s]
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -291,7 +317,7 @@ function getRandomPoint(scale){
 }
 
 
-var item=0
+var item= 0
 var cv
 
 
@@ -310,6 +336,8 @@ function getKernel(){
   if (!cv) {
     cv=vips[item++]
   }
+
+  console.log("cv: "+cvToString())
 
   setCVinURL()
 
@@ -347,6 +375,8 @@ function getKernel(){
 
   avgx= parseInt(avgx/count)
   avgy= parseInt(avgy/count)
+
+  center= [avgx, avgy]
    
   // reformat the map as list, recenter
 
@@ -359,8 +389,7 @@ function getKernel(){
       var y= parseInt(s[1]) - avgy
       res.push([x,y,intensity])
   }
-  
-  console.log(res)
+
   return res
 }
 
@@ -423,8 +452,8 @@ function updateKernelCanvas(kernel){
 
   ctx.putImageData(data,0,0)
 
-  c.style.width= kw*4
-  c.style.height= kh*4
+  c.style.width= kw*6/scale
+  c.style.height= kh*6/scale
 }
 
 var vips= [
@@ -432,6 +461,10 @@ var vips= [
 ,[6,44]
 ,[5,65]
 ,[0,88]],
+[[-9,43]
+,[-10,46]
+,[-15,61]
+,[-29,82]],
 [[62.29016949,74.17869893]
 ,[79.51935656,94.24502838]
 ,[55.98985747,92.23249967]
