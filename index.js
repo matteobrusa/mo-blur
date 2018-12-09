@@ -1,8 +1,9 @@
-"use strict";
+"use strict"
 
-var source
-var canvas  
-var context
+var image 
+var source  // ImageData of image
+var canvasCPU, canvasGPU  
+//var context  // 2d context of canvas
 var kernel
 var center
 var filename= "test.jpg"
@@ -15,52 +16,53 @@ var maxImageSize= 1600
 var textSpline 
 var textScale
 var textSplinePoints
+var checkboxGpu
+
+var useGpu= true
 
 function onload() { 
 
-    canvas= document.getElementById("main")
+    canvasCPU= document.getElementById("mainCPU")
+	canvasGPU= document.getElementById("mainGPU")
 
     document.addEventListener("dragover", handleDragover, true);
     document.addEventListener('drop', handleDrop, true)
 
+	checkboxGpu= document.getElementById("gpu")
 	textSpline= document.getElementById("textSpline")
 	textScale= document.getElementById("textScale")
 	textSplinePoints= document.getElementById("textSplinePoints")
 	 
+	checkboxGpu.addEventListener("change", function(){
+		useGpu= this.checked 
+		doIt()		
+	}) 
     textSpline.addEventListener("keyup", updateParams)
 	textScale.addEventListener("keyup", updateParams)
 	textSplinePoints.addEventListener("keyup", updateParams)
 
-    if (canvas.getContext) {
+     
 
-        context = canvas.getContext('2d');
+	image = new Image();
 
-        var img = new Image();
-        img.src = 'test.jpg';
+	image.onload = function () {
 
-        //drawing of the test image - img1
-        img.onload = function () {
-            //draw background image
+		source= getData(image)
 
+		var w= image.width
+		var h= image.height
 
-        source= getData(img)
+		console.log("image: "+ w+"x"+h)
 
-        var w= img.width
-        var h= img.height
+		canvasGPU.width= canvasCPU.width= w
+		canvasGPU.height= canvasCPU.height= h 
 
-        console.log("image: "+ w+"x"+h)
+		getCVfromURL()
 
-        canvas.width= w
-        canvas.height= h 
+		doIt()
+	}
 
-
-        getCVfromURL()
-        kernel= getKernel()
-        updateKernelCanvas(kernel)
-
-        doBlur() 
-        };
-    }
+	image.src = 'test.jpg'
 }
 
 function getCanvas(w,h) {
@@ -142,10 +144,7 @@ function updateParams(event) {
 		scale= Number(textScale.value)
 		splinePoints= Number(textSplinePoints.value)
 
-		kernel= getKernel()
-		updateKernelCanvas(kernel)
-
-		doBlur() 
+		doIt()
     }
 }
 
@@ -205,7 +204,7 @@ function scaleAndUploadImageFromUrl(url) {
 		source= ctx.getImageData(0,0,w,h)
 
  
-		doBlur()
+		doIt()
 	};
 	image.src = url;
 }
@@ -213,10 +212,8 @@ function scaleAndUploadImageFromUrl(url) {
 function loadNext(){
 
   cv=vips[item++]
-  kernel= getKernel()
-  updateKernelCanvas(kernel)
-
-  doBlur() 
+   
+  doIt()
 }
 
 function save() {
@@ -240,9 +237,8 @@ function rotate(degrees) {
 		p[1]=np[1]
 
 	}
-	kernel= getKernel()
-	updateKernelCanvas(kernel)
-	doBlur() 
+	
+	doIt()
 }
 
 function rotatePoint(p,rads) {
@@ -261,10 +257,28 @@ function rotatePoint(p,rads) {
 ///
 //////////////////////////////////////////////////////////////////////////
 
- 
-function doBlur() {
+function doIt() {
+	kernel= getKernel()
+	updateKernelCanvas(kernel)
 
-  console.time('doBlur');
+
+	if (useGpu)	{
+		canvasCPU.style.display= "none"
+		canvasGPU.style.display= "block"
+		convolveGL(image, canvasGPU)		
+	}
+	else {
+		canvasCPU.style.display= "block"
+		canvasGPU.style.display= "none"
+		convolveCPU(canvasCPU) 
+	}
+}
+ 
+function convolveCPU(canvas) {
+
+  console.time('convolve on CPU')
+
+  var context = canvas.getContext('2d');
 
   var w= source.width
   var h= source.height
@@ -300,28 +314,11 @@ function doBlur() {
 
   context.putImageData(dst,0,0)
 
-  console.timeEnd('doBlur')
+  console.timeEnd('convolve on CPU')
 }
-
-
-var seed = 1;
-function random() {
-    var x = Math.sin(seed++) * 10000;
-    return x - Math.floor(x);
-}
-
-
-function getRandomPoint(scale){
-    var ar=4
-  return [Math.random()*scale, Math.random()*scale*ar]
-}
-
 
 var item= 0
 var cv
-
-
-
 
 //////////////////////////////////////////////////////////////////////////
 ///
@@ -430,8 +427,8 @@ function updateKernelCanvas(kernel){
  
   var ctx= c.getContext('2d')
 
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.fillRect( 0, 0, kw, kh);
+  ctx.fillStyle = "rgba(0,0,0,0.3)"
+  ctx.fillRect( 0, 0, kw, kh)
 
   var data= ctx.getImageData(0,0,kw,kh)
 
