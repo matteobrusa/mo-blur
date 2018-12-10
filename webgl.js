@@ -56,11 +56,9 @@ void main() {
 }
 `
 
-
-
 function getFShaderLine(p, lastOne){
-	return "texture2D(u_image, v_texCoord + vec2(" + p[0]/image.width + ","
-	+ p[1]/image.height  + ")) * " +  p[2].toFixed(1) + (lastOne ?")":" +") + "\n"
+	return "texture2D(u_image, v_texCoord + vec2(" + p[0].toFixed(1) + ","
+	+ p[1].toFixed(1)  + ")/u_textureSize ) * " +  p[2].toFixed(1) + (lastOne ?")":" +") + "\n"
 }
 
 function kernelToShader(kernel, kernelWeight){
