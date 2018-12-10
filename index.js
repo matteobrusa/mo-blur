@@ -197,8 +197,8 @@ function scaleAndUploadImageFromUrl(url) {
 
 		var c= document.createElement('canvas')
 		var ctx= c.getContext("2d");
-		canvas.width= c.width= image.width= w;
-		canvas.height= c.height= image.height= h;
+		canvasCPU.width= canvasGPU.width= c.width= image.width= w;
+		canvasCPU.height= canvasGPU.height= c.height= image.height= h;
 		ctx.drawImage(image, 0, 0, w, h)
 
 		source= ctx.getImageData(0,0,w,h)
@@ -218,7 +218,7 @@ function loadNext(){
 
 function save() {
 
-	canvas.toBlob(function(blob){
+	canvasGPU.toBlob(function(blob){
 	console.log(blob)
 	var a= document.createElement("a")
 		a.href = URL.createObjectURL(blob);
