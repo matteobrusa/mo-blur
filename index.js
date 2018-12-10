@@ -177,7 +177,7 @@ function loadImage(file, source) {
 
 function scaleAndUploadImageFromUrl(url) {
 
-	var image = new Image();
+	image = new Image();
 	image.onload = function() {
         
         var w= image.width
