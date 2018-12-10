@@ -4,13 +4,13 @@ var image
 var source  // ImageData of image
 var canvasCPU, canvasGPU  
 //var context  // 2d context of canvas
-var kernel
+var kernel, kernelWeight
 var center
 var filename= "test.jpg"
  
 
-var splinePoints=64
-var scale= 1
+var splinePoints= 32
+var scale= 8
 var maxImageSize= 1600
 
 var textSpline 
@@ -301,9 +301,9 @@ function convolveCPU(canvas) {
       b+= source.data[c+o+2]*intensity
     }
 
-    var nr= r/256
-    var ng= g/256
-    var nb= b/256
+    var nr= r/kernelWeight
+    var ng= g/kernelWeight
+    var nb= b/kernelWeight
 
     dst.data[c]= nr
     dst.data[c+1]= ng
@@ -345,7 +345,7 @@ function getKernel(){
     cv2.push([p[0] * -scale, p[1]* -scale]) 
   }
 
-  var increment= 256/count
+  var increment= 1
   var map={}
   var avgx=0, avgy=0
 
@@ -415,8 +415,11 @@ function updateKernelCanvas(kernel){
   var kh= maxy-miny+1
 
   console.log("kernel points: "+ Object.keys(kernel).length+
-              "   intensity: "+ intensity + 
+              "   weight: "+ intensity + 
               "   size: "+ kw+","+kh)
+
+
+  kernelWeight= intensity
 
 
   // draw the kernel on the canvas

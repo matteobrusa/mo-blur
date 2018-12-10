@@ -1,4 +1,4 @@
-var vertexShader=`
+var vertexSource=`
 attribute vec2 a_position;
 attribute vec2 a_texCoord;
 
@@ -41,23 +41,25 @@ void main() {
 }
 `
 
-var fShaderT1=`
+var fragmentSource=`
 precision mediump float;
 
 uniform sampler2D u_image;
 uniform vec2 u_textureSize;
 varying vec2 v_texCoord;
 
-uniform vec3 kernel[$kernelSize];
+uniform vec3 u_kernel[$kernelSize];
 
 void main() {
 
 	gl_FragColor= vec4(0.0,0.0,0.0,0.0);
-	
-	for (int i=0; i<1; i++) {
-		gl_FragColor+= (
-		($kernelData)/$kernelWeight;
+
+	for (int i=0; i<$kernelSize; i++) {
+		vec3 point= u_kernel[i];
+		gl_FragColor+= texture2D(u_image, v_texCoord + vec2(point.x, point.y))*point.z;
 	}
+
+//	gl_FragColor/= $kernelWeight;
 }
 `
 
@@ -66,19 +68,7 @@ function getFShaderLine(p, lastOne){
 	+ p[1].toFixed(1)  + ")/u_textureSize ) * " +  p[2].toFixed(1) + (lastOne ?")":" +") + "\n"
 }
 
-function kernelToShader(kernel, kernelWeight){
-	
-	var data=""
-	var last= kernel[kernel.length -1]
-	for (el of kernel) {
-		data+= getFShaderLine(el, el==last)
-	}
-
-	return fShaderT1.replace("$kernelData", data)
-	.replace("$kernelWeight", kernelWeight.toFixed(1))
-	.replace("$kernelSize", kernel.length)
-}
-
+ 
 
 function loadShader(gl, shaderSource, shaderType) {
 	
@@ -104,13 +94,15 @@ function loadShader(gl, shaderSource, shaderType) {
   return shader;
 }
 
-function createProgram(gl, vShader, fShader) {
-	
-	//var kernel= [[-10,0,80],[10,0,80]]
-	var fsSource= kernelToShader(kernel, 255)
+function createProgram(gl) {
 
-	var vs= loadShader(gl, vShader,  gl.VERTEX_SHADER)
-	var fs= loadShader( gl, fsSource, gl.FRAGMENT_SHADER )
+	var fSource= fragmentSource
+					.replace("$kernelWeight", kernelWeight.toFixed(1))
+					.replace("$kernelSize", kernel.length)
+					.replace("$kernelSize", kernel.length)
+
+	var vs= loadShader(gl, vertexSource,  gl.VERTEX_SHADER)
+	var fs= loadShader(gl, fSource, gl.FRAGMENT_SHADER)
 
 	var program = gl.createProgram()
 
@@ -139,6 +131,7 @@ function convolveGL(image, canvas) {
 
 	var newImage= true//image==lastImg
 
+	//	kernel= [[-40,0,100],[-10,0,56], [20,0,100]]
 
 	console.time('convolve on GPU')
 
@@ -146,7 +139,7 @@ function convolveGL(image, canvas) {
 
 	// setup GLSL program
 	console.time('compile time')
-	var program= createProgram(gl, vertexShader, fragmentShader)
+	var program= createProgram(gl)
 	console.timeEnd('compile time')
 
 	// look up where the vertex data needs to go.
@@ -232,6 +225,17 @@ function convolveGL(image, canvas) {
 
 	// set the size of the image
 	gl.uniform2f(textureSizeLocation, image.width, image.height);
+
+
+	var flatKernel=[]
+
+	for (el of kernel) {
+		flatKernel.push(el[0]/image.width)
+		flatKernel.push(el[1]/image.width)
+		flatKernel.push(el[2]/kernelWeight)
+	}
+	var flatKernelPtr = gl.getUniformLocation(program, "u_kernel");
+	gl.uniform3fv(flatKernelPtr,flatKernel)
 
 	console.time('render time')
 	// Draw the rectangle (6 vertexes)
