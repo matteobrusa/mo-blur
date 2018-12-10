@@ -135,9 +135,9 @@ function convolveGL(image, canvas) {
 	var gl = canvas.getContext("webgl");
 
   // setup GLSL program
-    console.time('compile time')
+	console.time('compile time')
   var program= createProgram(gl, vertexShader, fragmentShader)
-    console.timeEnd('compile time')
+  console.timeEnd('compile time')
 
   // look up where the vertex data needs to go.
   var positionLocation = gl.getAttribLocation(program, "a_position");
@@ -195,23 +195,16 @@ console.timeEnd('upload texture')
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  // Tell it to use our program (pair of shaders)
   gl.useProgram(program);
 
-  // Turn on the position attribute
+  // positionLocation will hold the current position
   gl.enableVertexAttribArray(positionLocation);
 
   // Bind the position buffer.
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
   // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  var size = 2;          // 2 components per iteration
-  var type = gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  var offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-  	positionLocation, size, type, normalize, stride, offset)
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
   // Turn on the texcoord attribute
   gl.enableVertexAttribArray(texcoordLocation);
@@ -220,27 +213,17 @@ console.timeEnd('upload texture')
   gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
 
   // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  var size = 2;          // 2 components per iteration
-  var type = gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  var offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-  	texcoordLocation, size, type, normalize, stride, offset)
+  gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 0, 0)
 
   // set the resolution
   gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
 
   // set the size of the image
   gl.uniform2f(textureSizeLocation, image.width, image.height);
-
-  // Draw the rectangle.
-  var primitiveType = gl.TRIANGLES;
-  var offset = 0;
-  var count = 6;
-
+ 
   console.time('render time')
-  gl.drawArrays(primitiveType, offset, count);
+	// Draw the rectangle (6 vertexes)
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
   console.timeEnd('render time')
 
   console.timeEnd('convolve on GPU')
