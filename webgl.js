@@ -46,13 +46,18 @@ precision mediump float;
 
 uniform sampler2D u_image;
 uniform vec2 u_textureSize;
-
 varying vec2 v_texCoord;
+
+uniform vec3 kernel[$kernelSize];
 
 void main() {
 
-	gl_FragColor = (
-	($kernelData)/$kernelWeight;
+	gl_FragColor= vec4(0.0,0.0,0.0,0.0);
+	
+	for (int i=0; i<1; i++) {
+		gl_FragColor+= (
+		($kernelData)/$kernelWeight;
+	}
 }
 `
 
@@ -71,6 +76,7 @@ function kernelToShader(kernel, kernelWeight){
 
 	return fShaderT1.replace("$kernelData", data)
 	.replace("$kernelWeight", kernelWeight.toFixed(1))
+	.replace("$kernelSize", kernel.length)
 }
 
 
@@ -127,107 +133,115 @@ function createProgram(gl, vShader, fShader) {
 }
 
 
+var lastImg
 
 function convolveGL(image, canvas) {
 
+	var newImage= true//image==lastImg
+
+
 	console.time('convolve on GPU')
-	
+
 	var gl = canvas.getContext("webgl");
 
-  // setup GLSL program
+	// setup GLSL program
 	console.time('compile time')
-  var program= createProgram(gl, vertexShader, fragmentShader)
-  console.timeEnd('compile time')
+	var program= createProgram(gl, vertexShader, fragmentShader)
+	console.timeEnd('compile time')
 
-  // look up where the vertex data needs to go.
-  var positionLocation = gl.getAttribLocation(program, "a_position");
-  var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
+	// look up where the vertex data needs to go.
+	var positionLocation = gl.getAttribLocation(program, "a_position");
+	var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
 
-  // Create a buffer to put three 2d clip space points in
-  var positionBuffer = gl.createBuffer();
+	// Create a buffer to put three 2d clip space points in
+	var positionBuffer = gl.createBuffer();
 
-  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  
-  // Set a rectangle the same size as the image.
-  setRectangle(gl, 0, 0, image.width, image.height);
+	// Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  // provide texture coordinates for the rectangle.
-  var texcoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-  	0.0,  0.0,
-  	1.0,  0.0,
-  	0.0,  1.0,
-  	0.0,  1.0,
-  	1.0,  0.0,
-  	1.0,  1.0,
-  	]), gl.STATIC_DRAW);
+	// Set a rectangle the same size as the image.
+	setRectangle(gl, 0, 0, image.width, image.height);
 
-  // Create a texture.
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
+	// provide texture coordinates for the rectangle.
+	var texcoordBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+	0.0,  0.0,
+	1.0,  0.0,
+	0.0,  1.0,
+	0.0,  1.0,
+	1.0,  0.0,
+	1.0,  1.0,
+	]), gl.STATIC_DRAW);
 
-  // Set the parameters so we can render any size image.
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+	// Create a texture.
+	if (newImage){
+		console.time('upload texture')
+		var texture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, texture);
 
-console.time('upload texture')
-  // Upload the image into the texture.
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-console.timeEnd('upload texture')
+		// Set the parameters so we can render any size image.
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-  // lookup uniforms
-  var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
-  var textureSizeLocation = gl.getUniformLocation(program, "u_textureSize");
 
-  var width= image.width
-  var height= image.height
-  canvas.width= width
-  canvas.height= height
+		// Upload the image into the texture.
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+		console.timeEnd('upload texture')
+	}
+	// lookup uniforms
+	var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+	var textureSizeLocation = gl.getUniformLocation(program, "u_textureSize");
 
-  // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0,  width,  height);
+	var width= image.width
+	var height= image.height
+	canvas.width= width
+	canvas.height= height
 
-  // Clear the canvas
-  gl.clearColor(0, 0, 0, 0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+	// Tell WebGL how to convert from clip space to pixels
+	gl.viewport(0, 0,  width,  height);
 
-  gl.useProgram(program);
+	// Clear the canvas
+	gl.clearColor(0, 0, 0, 0);
+	gl.clear(gl.COLOR_BUFFER_BIT);
 
-  // positionLocation will hold the current position
-  gl.enableVertexAttribArray(positionLocation);
+	gl.useProgram(program);
 
-  // Bind the position buffer.
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+	// positionLocation will hold the current position
+	gl.enableVertexAttribArray(positionLocation);
 
-  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+	// Bind the position buffer.
+	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  // Turn on the texcoord attribute
-  gl.enableVertexAttribArray(texcoordLocation);
+	// Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+	gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
-  // Bind the position buffer.
-  gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+	// Turn on the texcoord attribute
+	gl.enableVertexAttribArray(texcoordLocation);
 
-  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 0, 0)
+	// Bind the position buffer.
+	gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
 
-  // set the resolution
-  gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+	// Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+	gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 0, 0)
 
-  // set the size of the image
-  gl.uniform2f(textureSizeLocation, image.width, image.height);
- 
-  console.time('render time')
+	// set the resolution
+	gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+
+	// set the size of the image
+	gl.uniform2f(textureSizeLocation, image.width, image.height);
+
+	console.time('render time')
 	// Draw the rectangle (6 vertexes)
-  gl.drawArrays(gl.TRIANGLES, 0, 6);
-  console.timeEnd('render time')
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
+	console.timeEnd('render time')
 
-  console.timeEnd('convolve on GPU')
-}
+	console.timeEnd('convolve on GPU')
+
+	lastImg= image
+	}
 
 function setRectangle(gl, x, y, width, height) {
 	var x1 = x;
